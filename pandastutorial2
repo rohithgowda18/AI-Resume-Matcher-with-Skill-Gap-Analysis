@@ -1,0 +1,54 @@
+9. Employee dataset operations (example code)
+import pandas as pd
+from datetime import datetime
+import matplotlib.pyplot as plt
+
+#  First, load the data:
+df = pd.read_csv("employee.csv")  # Replace with your file path if needed
+
+#  1. Rank employees based on their salary within their department:
+df['SalaryRank'] = df.groupby('Department')['Salary'].rank(ascending=False)
+print(df[['EmployeeID', 'Department', 'Salary', 'SalaryRank']])
+
+#  2. Which JoiningYear has the most employees still in the company?
+still_employed = df[df['LeftCompany'] == 0]
+print("Year with most active employees:")
+print(still_employed['JoiningYear'].value_counts().idxmax())
+
+#  3. Find employees who are above 50 years old and still working:
+print(df[(df['Age'] > 50) & (df['LeftCompany'] == 0)])
+
+#  4. Compute average salary increase trend (5% annual growth since joining):
+current_year = datetime.now().year
+df['YearsWorked'] = current_year - df['JoiningYear']
+df['EstimatedSalaryNow'] = df['Salary'] * (1.05 ** df['YearsWorked'])
+print(df[['EmployeeID', 'Salary', 'EstimatedSalaryNow']])
+
+# 5. Create bins of Age and find average salary for each bin:
+df['AgeGroup'] = pd.cut(df['Age'], bins=[20, 30, 40, 50, 60], labels=['20-30', '30-40', '40-50', '50-60'])
+print(df.groupby('AgeGroup')['Salary'].mean())
+
+#  6. Pivot table: total employees by JoiningYear and Department:
+pivot = df.pivot_table(index='JoiningYear', columns='Department', values='EmployeeID', aggfunc='count', fill_value=0)
+print(pivot)
+
+#  7. Is remote work more common in a specific department?
+remote_rate = df.groupby('Department')['RemoteWork'].mean()
+print(remote_rate.sort_values(ascending=False))
+
+#  8. Standard deviation of salaries for each department:
+print(df.groupby('Department')['Salary'].std())
+
+#  9. Histogram of Performance Score for male employees:
+df[df['Gender'] == 'Male']['PerformanceScore'].hist(bins=5)
+plt.title("Performance Score Distribution (Male Employees)")
+plt.xlabel("Score")
+plt.ylabel("Count")
+plt.show()
+
+# 10a. Work hours affecting leaving:
+print(df.groupby('LeftCompany')['WorkHoursPerWeek'].mean())
+
+#  10b. Top 5 earners in each department:
+top_earners = df.sort_values('Salary', ascending=False).groupby('Department').head(5)
+print(top_earners[['EmployeeID', 'Department', 'Salary']])
