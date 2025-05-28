@@ -1,0 +1,41 @@
+8. Chipotle dataset operations (example code)
+python
+import pandas as pd
+
+df = pd.read_csv("chipotle.csv")
+
+# 1. Unique orders
+print("Unique orders:", df['order_id'].nunique())
+
+# 2. Average revenue per order
+df['item_price'] = df['item_price'].replace('[\$,]', '', regex=True).astype(float)
+print("Avg revenue per order:", df.groupby('order_id')['item_price'].sum().mean())
+
+# 3. Unique items sold
+print("Unique items:", df['item_name'].nunique())
+
+# 4. Top 5 items by quantity
+print(df.groupby('item_name')['quantity'].sum().sort_values(ascending=False).head(5))
+
+# 5. Unique choice_description
+print("Unique choice descriptions:", df['choice_description'].nunique())
+
+# 6. Order with highest bill
+order_totals = df.groupby('order_id')['item_price'].sum()
+print("Order with highest bill:", order_totals.idxmax(), order_totals.max())
+
+# 7. Inconsistent pricing
+inconsistent = df.groupby('item_name')['item_price'].nunique()
+print("Items with inconsistent pricing:", inconsistent[inconsistent > 1])
+
+# 8. Orders with quantity > 5
+print(df[df['quantity'] > 5])
+
+# 9. Average item price
+print("Average item price:", df['item_price'].mean())
+
+# 10. Unique item prices and associated items
+print(df.groupby('item_price')['item_name'].unique())
+
+# 11. Orders with Canned Soda
+print(df[df['item_name'].str.contains("Canned Soda")])
