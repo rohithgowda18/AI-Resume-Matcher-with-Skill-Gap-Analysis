@@ -1,0 +1,338 @@
+;1.Use Labels to calculate the sum of say 10 numbers.
+;additon 32 bit
+PRESERVE8 ; Indicate the code here preserve
+; 8 byte stack alignment
+THUMB ; Indicate THUMB code is used
+AREA |.text|, CODE, READONLY
+EXPORT __main
+; Start of CODE area
+DataIn EQU 0x20000000
+Sum EQU 0x20000040
+__main
+LDR r0,=DataIn; Get the address of variable 'DataIn'
+MOVS r1, #10 ; loop counter
+MOVS r2, #0 ; Result - starting from 0
+add_loop
+LDM r0!,{r3} ; Load result and increment address
+ADDS r2, r3 ; add to result
+SUBS r1, #1 ; increment loop counter
+BNE add_loop
+LDR r0,=Sum ; Get the address of variable 'Sum'
+STR r2,[r0] ; Save result to Sum
+stop B stop
+END
+=================================================================================
+;2.Write an Assembly level program to copy multiple data at a time say 128 bytes of data in two iteration
+;additon 32 bit
+PRESERVE8 ; Indicate the code here preserve
+; 8 byte stack alignment
+THUMB ; Indicate THUMB code is used
+AREA |.text|, CODE, READONLY
+EXPORT __main
+; Start of CODE area
+__main
+LDR r0,=0x20000000 ; Source address
+LDR r1,=0x20000120 ; Destination address
+LDR r2,=128 ; number of bytes to copy, also
+copy_loop ; acts as loop counter
+LDMIA r0!,{r4-r7} ; Read 4 words and increment r0
+STMIA r1!,{r4-r7} ; Store 4 words and increment r1
+LDMIA r0!,{r4-r7} ; Read 4 words and increment r0
+STMIA r1!,{r4-r7} ; Store 4 words and increment r1
+LDMIA r0!,{r4-r7} ; Read 4 words and increment r0
+STMIA r1!,{r4-r7} ; Store 4 words and increment r1
+LDMIA r0!,{r4-r7} ; Read 4 words and increment r0
+STMIA r1!,{r4-r7} ; Store 4 words and increment r1
+SUBS r2, r2, #64 ; Each time 64 bytes are copied
+BNE copy_loop ; loop until all data copied
+stop B stop
+END
+===================================================================================
+;3.Write a program to illustrate ASR and LSLS instruction.
+PRESERVE8 ; Ensure 8-byte stack alignment
+THUMB ; Use THUMB instruction set
+AREA |.text|, CODE, READONLY
+EXPORT __main
+__main
+LDR r0, =0xF0000000 ; Load a negative number in R0 (signed)
+ASRS r1, r0, #4 ; Arithmetic Shift Right by 4 bits
+; Preserves the sign (0xFF000000 if signed)
+LDR r2, =0x0000000F ; Load small positive value in R2
+LSLS r3, r2, #2 ; Logical Shift Left by 2 bits
+stop B stop
+END
+===================================================================================
+;4.Write a program to illustrate the processing of data in a stack and realizing of stack using another file say (processing x to read 2x+9).
+;Main.asm
+PRESERVE8 ; Indicate the code here preserve
+; 8 byte stack alignment
+THUMB ; Indicate THUMB code is used
+AREA |.text|, CODE, READONLY
+EXPORT __main
+EXTERN func
+; Start of CODE area
+__main
+LDR r0,=0x10;
+BL func
+stop B stop
+END
+------------------------------------------
+PRESERVE8
+THUMB
+AREA |.text|, CODE, READONLY
+EXPORT func
+func
+push{r0}
+MOVS r1,#02
+MULS r0,r1,r0
+adds r0,r0,#9
+BX LR
+END
+========================================================================
+;5.Write a program to clear and extract the bits with starting position P and width of the bits W.
+PRESERVE8 ; Indicate the code here preserve
+; 8 byte stack alignment
+THUMB ; Indicate THUMB code is used
+AREA |.text|, CODE, READONLY
+EXPORT __main
+; Start of CODE area
+__main
+;extracting
+LDR r0,=0xFFC0FFFF
+LSLS r0,r0,#(32-16-8)//(32-W-P)
+LSRS r0,r0,#(32-8)
+;clearing
+LDR r0,=0xFFC0FFFF
+MOVS r1,#16
+MOVS R2,#08;(32-16-08)//( 32-W-P)
+MOVS r3,#08
+RORS r0,r0,r1
+LSRS r0,r0,r2
+RORS r0,r0,r3
+stop B stop
+END
+===========================================================================
+;6.Write a program to use switch case.
+PRESERVE8 ; Indicate the code here preserve
+; 8 byte stack alignment
+THUMB ; Indicate THUMB code is used
+AREA |.text|, CODE, READONLY
+EXPORT __main
+; Start of CODE area
+__main
+LDR R0, =0
+CMP R0, #3 ; Compare input to maximum valid choice
+BHI default_case ; Branch to default case if higher than 3
+MOVS R2, #4 ; Multiply branch table offset by 4
+MULS R0, R2, R0 ; (size of each entry)
+LDR R1, =BranchTable ; Get base address of branch table(0x284)
+LDR R2,[R1,R0] ; Get the actual branch destination
+BX R2 ; Branch to destination
+ALIGN 4 ; Alignment control. The table has
+BranchTable ; to be word aligned to prevent unaligned read ;table of each destination address
+DCD Dest0
+DCD Dest1
+DCD Dest2
+DCD Dest3
+default_case
+stop B stop; Instructions for default case
+Dest0 ldr r0, =10
+stop1 B stop1 ; Instructions for case ‘0’
+Dest1 ldr r0, =20
+stop2 B stop2 ; Instructions for case ‘1’
+Dest2 ldr r0, =30
+stop3 B stop3 ; Instructions for case ‘2’
+Dest3 ldr r0, =40
+stop4 B stop4 ; Instructions for case ‘3’
+END
+================================================================================
+//7.Write a C program to Light LEDs connected to port C12-15 using macros.
+// Smpl_GPIO_LED1 : GPC12--15 GPA 12_14 to control on-board LEDs
+// low-active output to control Red LEDs
+//
+#include <stdio.h>
+#include "NUC1xx.h"
+#include "Driver\DrvGPIO.h"
+#include "Driver\DrvSYS.h"
+void Init_LED() // Initialize GPIO pins
+{
+DrvGPIO_Open(E_GPC, 12, E_IO_OUTPUT); // GPC12 pin set to output mode
+DrvGPIO_SetBit(E_GPC, 12); // Goutput Hi to turn off LED
+}
+int main (void)
+{
+UNLOCKREG(); // unlock register for programming
+DrvSYS_Open(48000000);// set System Clock to run at 48MHz
+// 12MHz crystal input, PLL output 48MHz
+LOCKREG(); // lock register from programming
+Init_LED(); // Initialize LEDs (four on-board LEDs below LCD panel)
+while (1) // forever loop to keep flashing four LEDs one at a time
+{
+DrvGPIO_ClrBit(E_GPC, 12); // output Low to turn on LED
+DrvSYS_Delay(300000); // delay
+DrvGPIO_SetBit(E_GPC, 12); // output Hi to turn off LED
+DrvSYS_Delay(300000); // delay
+}
+}
+====================================================================================
+//8.Write a C program to display 4 lines of Text on LCD.
+// Smpl_LCD_Text: display 4 lines of Text on LCD
+//
+#include <stdio.h>
+#include "NUC1xx.h"
+#include "Driver\DrvSYS.h"
+#include "Driver\DrvGPIO.h"
+#include "NUC1xx-LB_002\LCD_Driver.h"
+int main(void)
+{
+UNLOCKREG();
+DrvSYS_Open(48000000); // set to 48MHz
+LOCKREG();
+Initial_panel();
+clr_all_panel();
+print_lcd(0, "Smpl_LCD_Text ");
+print_lcd(1, "Nu-LB-NUC140 ");
+print_lcd(2, "Test LCD Display");
+print_lcd(3, "Nuvoton NuMicro ");
+}
+====================================================================================
+//9.Write a C program to enable External Interrupt pin to trigger interrupt on GPB15 and buzz.
+// Smpl_GPIO_EINT1 : External Interrupt pin to trigger interrupt on GPB15, then Buzz
+//
+#include <stdio.h>
+#include "NUC1xx.h"
+#include "Driver\DrvGPIO.h"
+#include "Driver\DrvUART.h"
+#include "Driver\DrvSYS.h"
+// External Interrupt Handler (INT button to trigger GPB15)
+void EINT1Callback(void)
+{
+// Clear interrupt flag manually
+GPIOB->ISRC = (1 << 15); // Clear interrupt source for GPB15
+DrvGPIO_ClrBit(E_GPB, 11); // Turn buzzer ON
+DrvSYS_Delay(100000);
+DrvGPIO_SetBit(E_GPB, 11); // Turn buzzer OFF
+}
+int main (void)
+{
+UNLOCKREG();
+DrvSYS_SetOscCtrl(E_SYS_XTL12M, 1); // External 12MHz Crystal
+DrvSYS_Delay(5000); // Delay for stable clock
+DrvSYS_SelectHCLKSource(0); // Clock source = 12MHz Crystal
+LOCKREG();
+DrvGPIO_Open(E_GPB, 11, E_IO_OUTPUT); // GPB11 as output for Buzzer
+DrvGPIO_SetBit(E_GPB, 11); // Buzzer off initially (set high)
+// External Interrupt
+DrvGPIO_Open(E_GPB, 15, E_IO_INPUT); // GPB15 as input
+DrvGPIO_EnableEINT1(E_IO_BOTH_EDGE, E_MODE_EDGE, EINT1Callback); // Enable EINT1 on GPB15
+while(1)
+{
+// Just wait for interrupts — no need to call callback here
+}
+}
+========================================================================================
+//10.Write a C program to take input from 3x3 keypad and output to LCD display.
+// */
+// Smpl_LCD_Keypad : input 3x3 keypad, output to LCD display
+//
+#include <stdio.h>
+#include "NUC1xx.h"
+#include "DrvSYS.h"
+#include "DrvGPIO.h"
+#include "scankey.h"
+#include "NUC1xx-LB_002\LCD_Driver.h"
+int32_t main (void)
+{
+int8_t number;
+int8_t last_number = 0; // Store last pressed key
+char TEXT0[16] = "Smpl_LCD_Keypad";
+char TEXT1[16] = "Keypad: ";
+UNLOCKREG();
+DrvSYS_Open(48000000); // set MCU to run at 48MHz
+LOCKREG();
+Initial_panel();
+clr_all_panel();
+OpenKeyPad(); // initialize 3x3 keypad
+print_lcd(0,TEXT0); // print title
+while (1)
+{
+number = Scankey(); // scan keypad to input
+if (number != 0) // only update if a key is pressed
+{
+last_number = number; // save last pressed key
+sprintf(TEXT1 + 8, "%d ", last_number); // update string with last key (add spaces to clear previous)
+print_lcd(1, TEXT1); // display string on LCD
+}
+DrvSYS_Delay(5000); // delay
+}
+}
+=============================================================================================================
+//11.Write a C program to count from 0 to 99 and display them on 7-segment LEDs.
+// Smpl_7seg : counting from 0 to 9999 and display on 7-segment LEDs
+//
+#include <stdio.h>
+#include "NUC1xx.h"
+#include "Driver\DrvSYS.h"
+#include "Seven_Segment.h"
+#include "DrvGPIO.h"
+#include "DrvSYS.h"
+// display an integer on four 7-segment LEDs
+void seg_display(int16_t value)
+{
+int8_t digit;
+digit = value / 1000;
+//close_seven_segment();
+//show_seven_segment(3,digit);
+//DrvSYS_Delay(5000);
+value = value - digit * 1000;
+digit = value / 100;
+//close_seven_segment();
+//show_seven_segment(2,digit);
+//DrvSYS_Delay(5000);
+value = value - digit * 100;
+digit = value / 10;
+close_seven_segment();
+show_seven_segment(1,digit);
+DrvSYS_Delay(5000);
+value = value - digit * 10;
+digit = value;
+close_seven_segment();
+show_seven_segment(0,digit);
+DrvSYS_Delay(5000);
+}
+int32_t main (void)
+{
+char TEXT1[16];
+int val;
+val=0000;
+UNLOCKREG();
+DrvSYS_Open(48000000);
+LOCKREG();
+while(1)
+{ DrvSYS_Delay(500);
+val=val++ ;
+seg_display(val); // write 1 to clear the flag
+}
+}
+============================================================================================================
+//12. Using puTTy make a remote connection with SSH interface to raspberry pi and write a python program to blink a LED
+import RPi.GPIO as GPIO
+import time
+# Use BCM pin numbering
+GPIO.setmode(GPIO.BCM)
+# Set the GPIO pin number where the LED is connected
+LED_PIN = 17
+# Set up the pin as output
+GPIO.setup(LED_PIN, GPIO.OUT)
+# Blink the LED
+try:
+while True:
+GPIO.output(LED_PIN, GPIO.HIGH) # Turn on LED
+time.sleep(1) # Wait 1 second
+GPIO.output(LED_PIN, GPIO.LOW) # Turn off LED
+time.sleep(1) # Wait 1 second
+except KeyboardInterrupt:
+print("Blinking stopped by user")
+# Cleanup GPIO settings before exiting
+finally:
+GPIO.cleanup()
