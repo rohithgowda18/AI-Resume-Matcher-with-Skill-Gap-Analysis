@@ -204,116 +204,118 @@ print_lcd(3, "Nuvoton NuMicro ");
 #include "Driver\DrvGPIO.h"
 #include "Driver\DrvUART.h"
 #include "Driver\DrvSYS.h"
-// External Interrupt Handler (INT button to trigger GPB15)
-void EINT1Callback(void)
-{
-// Clear interrupt flag manually
-GPIOB->ISRC = (1 << 15); // Clear interrupt source for GPB15
-DrvGPIO_ClrBit(E_GPB, 11); // Turn buzzer ON
-DrvSYS_Delay(100000);
-DrvGPIO_SetBit(E_GPB, 11); // Turn buzzer OFF
+
+// Interrupt handler: called when button on GPB15 is pressed
+void EINT1_Handler(void) {
+    GPIOB->ISRC = (1 << 15);       // Clear interrupt flag
+    DrvGPIO_ClrBit(E_GPB, 11);     // Buzzer ON (active low)
+    DrvSYS_Delay(100000);          // Small delay
+    DrvGPIO_SetBit(E_GPB, 11);     // Buzzer OFF
 }
-int main (void)
-{
-UNLOCKREG();
-DrvSYS_SetOscCtrl(E_SYS_XTL12M, 1); // External 12MHz Crystal
-DrvSYS_Delay(5000); // Delay for stable clock
-DrvSYS_SelectHCLKSource(0); // Clock source = 12MHz Crystal
-LOCKREG();
-DrvGPIO_Open(E_GPB, 11, E_IO_OUTPUT); // GPB11 as output for Buzzer
-DrvGPIO_SetBit(E_GPB, 11); // Buzzer off initially (set high)
-// External Interrupt
-DrvGPIO_Open(E_GPB, 15, E_IO_INPUT); // GPB15 as input
-DrvGPIO_EnableEINT1(E_IO_BOTH_EDGE, E_MODE_EDGE, EINT1Callback); // Enable EINT1 on GPB15
-while(1)
-{
-// Just wait for interrupts — no need to call callback here
+
+int main(void) {
+    // Setup system clock
+    UNLOCKREG();
+    DrvSYS_SetOscCtrl(E_SYS_XTL12M, 1);  // Enable 12MHz crystal
+    DrvSYS_Delay(5000);                  // Wait for stabilization
+    DrvSYS_SelectHCLKSource(0);          // Select external crystal for HCLK
+    LOCKREG();
+
+    // Setup buzzer pin (GPB11) as output
+    DrvGPIO_Open(E_GPB, 11, E_IO_OUTPUT);
+    DrvGPIO_SetBit(E_GPB, 11);  // Turn buzzer OFF initially
+
+    // Setup external interrupt on GPB15
+    DrvGPIO_Open(E_GPB, 15, E_IO_INPUT);  // GPB15 as input
+    DrvGPIO_EnableEINT1(E_IO_BOTH_EDGE, E_MODE_EDGE, EINT1_Handler);  // Trigger on both edges
+
+    while (1) {
+        // Do nothing, wait for interrupt
+    }
 }
-}
+
 ========================================================================================
 //10.Write a C program to take input from 3x3 keypad and output to LCD display.
-// */
-// Smpl_LCD_Keypad : input 3x3 keypad, output to LCD display
-//
 #include <stdio.h>
 #include "NUC1xx.h"
 #include "DrvSYS.h"
 #include "DrvGPIO.h"
 #include "scankey.h"
-#include "NUC1xx-LB_002\LCD_Driver.h"
-int32_t main (void)
+#include "NUC1xx-LB_002/LCD_Driver.h"
+
+int32_t main(void)
 {
-int8_t number;
-int8_t last_number = 0; // Store last pressed key
-char TEXT0[16] = "Smpl_LCD_Keypad";
-char TEXT1[16] = "Keypad: ";
-UNLOCKREG();
-DrvSYS_Open(48000000); // set MCU to run at 48MHz
-LOCKREG();
-Initial_panel();
-clr_all_panel();
-OpenKeyPad(); // initialize 3x3 keypad
-print_lcd(0,TEXT0); // print title
-while (1)
-{
-number = Scankey(); // scan keypad to input
-if (number != 0) // only update if a key is pressed
-{
-last_number = number; // save last pressed key
-sprintf(TEXT1 + 8, "%d ", last_number); // update string with last key (add spaces to clear previous)
-print_lcd(1, TEXT1); // display string on LCD
+    int8_t key;
+    char title[16] = "Smpl_LCD_Keypad";
+    char line[16];
+
+    // Unlock protected registers
+    UNLOCKREG();
+    DrvSYS_Open(48000000);  // Set system clock to 48 MHz
+    LOCKREG();
+
+    Initial_panel();        // Initialize LCD
+    clr_all_panel();        // Clear LCD display
+    OpenKeyPad();           // Initialize 3x3 keypad
+
+    print_lcd(0, title);    // Show title on first line
+
+    while (1)
+    {
+        key = Scankey();   // Read key input
+
+        if (key != 0)      // If any key is pressed
+        {
+            sprintf(line, "Keypad: %d", key);  // Prepare message
+            print_lcd(1, line);                // Show on LCD line 1
+        }
+
+        DrvSYS_Delay(5000); // Small delay to avoid flicker
+    }
 }
-DrvSYS_Delay(5000); // delay
-}
-}
+
+
 =============================================================================================================
 //11.Write a C program to count from 0 to 99 and display them on 7-segment LEDs.
-// Smpl_7seg : counting from 0 to 9999 and display on 7-segment LEDs
-//
 #include <stdio.h>
 #include "NUC1xx.h"
 #include "Driver\DrvSYS.h"
 #include "Seven_Segment.h"
 #include "DrvGPIO.h"
 #include "DrvSYS.h"
-// display an integer on four 7-segment LEDs
+
 void seg_display(int16_t value)
 {
-int8_t digit;
-digit = value / 1000;
-//close_seven_segment();
-//show_seven_segment(3,digit);
-//DrvSYS_Delay(5000);
-value = value - digit * 1000;
-digit = value / 100;
-//close_seven_segment();
-//show_seven_segment(2,digit);
-//DrvSYS_Delay(5000);
-value = value - digit * 100;
-digit = value / 10;
-close_seven_segment();
-show_seven_segment(1,digit);
-DrvSYS_Delay(5000);
-value = value - digit * 10;
-digit = value;
-close_seven_segment();
-show_seven_segment(0,digit);
-DrvSYS_Delay(5000);
+    int8_t digit;
+
+    digit = value / 10;
+    close_seven_segment();
+    show_seven_segment(1, digit);
+    DrvSYS_Delay(5000);
+
+    digit = value % 10;
+    close_seven_segment();
+    show_seven_segment(0, digit);
+    DrvSYS_Delay(5000);
 }
-int32_t main (void)
+
+int32_t main(void)
 {
-char TEXT1[16];
-int val;
-val=0000;
-UNLOCKREG();
-DrvSYS_Open(48000000);
-LOCKREG();
-while(1)
-{ DrvSYS_Delay(500);
-val=val++ ;
-seg_display(val); // write 1 to clear the flag
+    int val = 0;
+
+    UNLOCKREG();
+    DrvSYS_Open(48000000);  // Set system clock to 48 MHz
+    LOCKREG();
+
+    while (1)
+    {
+        seg_display(val);
+        val++;
+        if (val > 99) val = 0;  // Limit counting from 0 to 99
+        DrvSYS_Delay(500000);   // Delay for visibility
+    }
 }
-}
+
 ============================================================================================================
 //12. Using puTTy make a remote connection with SSH interface to raspberry pi and write a python program to blink a LED
 import RPi.GPIO as GPIO
