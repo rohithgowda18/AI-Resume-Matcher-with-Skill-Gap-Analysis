@@ -338,3 +338,92 @@ print("Blinking stopped by user")
 # Cleanup GPIO settings before exiting
 finally:
 GPIO.cleanup()
+
+
+//9.Write a C program to enable External Interrupt pin to trigger interrupt on GPB15 and buzz.
+
+#include <stdio.h>
+#include "NUC1xx.h"
+#include "Driver\DrvGPIO.h"
+#include "Driver\DrvSYS.h"
+#include "Driver\DrvUART.h"
+
+// Interrupt Service Routine for External Interrupt 1 (connected to GPB15)
+void EINT1_Handler(void) {
+    GPIOB->ISRC = (1 << 15);          // Clear interrupt flag for GPB15
+    DrvGPIO_ClrBit(E_GPB, 11);        // Turn ON Buzzer (active low)
+    DrvSYS_Delay(100000);             // Delay to keep buzzer on briefly
+    DrvGPIO_SetBit(E_GPB, 11);        // Turn OFF Buzzer
+}
+
+int main(void) {
+    // Step 1: Unlock and configure system clock
+    UNLOCKREG();
+    DrvSYS_Open(48000000);            // Set system clock to 48MHz
+    LOCKREG();
+
+    // Step 2: Initialize Buzzer pin (GPB11) as output
+    DrvGPIO_Open(E_GPB, 11, E_IO_OUTPUT);
+    DrvGPIO_SetBit(E_GPB, 11);        // Turn buzzer OFF initially (active low)
+
+    // Step 3: Initialize GPB15 as input for external interrupt
+    DrvGPIO_Open(E_GPB, 15, E_IO_INPUT);
+
+    // Step 4: Enable External Interrupt 1 (EINT1) on GPB15
+    DrvGPIO_EnableEINT1(E_IO_BOTH_EDGE, E_MODE_EDGE, EINT1_Handler);
+
+    while (1) {
+        // Main loop: idle, wait for interrupt
+    }
+}
+
+========================================================================================================================================================
+========================================================================================================================================================
+  Switch case     
+        THUMB
+        AREA |.text|, CODE, READONLY
+        EXPORT __main
+
+__main
+        LDR     R0, =0
+        CMP     R0, #3
+        BHI     default_case
+
+        MOVS    R2, #4
+        MULS    R0, R2, R0
+        LDR     R1, =BranchTable
+        LDR     R2, [R1, R0]
+        BX      R2
+
+        ALIGN 4
+BranchTable
+        DCD     Dest0
+        DCD     Dest1
+        DCD     Dest2
+        DCD     Dest3
+
+default_case
+        LDR     R0, =0
+        B       stop
+
+Dest0
+        LDR     R0, =10
+        B       stop
+
+Dest1
+        LDR     R0, =20
+        B       stop
+
+Dest2
+        LDR     R0, =30
+        B       stop
+
+Dest3
+        LDR     R0, =40
+        B       stop
+
+stop
+        B       stop    ; Single infinite loop label
+
+        END
+
