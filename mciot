@@ -380,20 +380,19 @@ int main(void) {
 ========================================================================================================================================================
 ========================================================================================================================================================
   Switch case     
+              PRESERVE8
         THUMB
         AREA |.text|, CODE, READONLY
         EXPORT __main
 
 __main
-        LDR     R0, =0
+        LDR     R0, =2          ; Change this value (0-3) to test different cases
         CMP     R0, #3
-        BHI     default_case
+        BHI     default_case    ; If R0 > 3, jump to default_case
 
-        MOVS    R2, #4
-        MULS    R0, R2, R0
         LDR     R1, =BranchTable
-        LDR     R2, [R1, R0]
-        BX      R2
+        LDR     R2, [R1, R0, LSL #2] ; Load address from branch table
+        BX      R2              ; Branch to case handler
 
         ALIGN 4
 BranchTable
@@ -403,7 +402,7 @@ BranchTable
         DCD     Dest3
 
 default_case
-        LDR     R0, =0
+        LDR     R0, =0          ; Default case value
         B       stop
 
 Dest0
@@ -423,7 +422,6 @@ Dest3
         B       stop
 
 stop
-        B       stop    ; Single infinite loop label
+        B       stop            ; Infinite loop
 
         END
-
