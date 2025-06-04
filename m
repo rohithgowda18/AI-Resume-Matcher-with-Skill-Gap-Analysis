@@ -75,3 +75,43 @@ public class Server {
         }
     }
 }
+
+
+import java.util.Scanner;
+
+public class SimpleCRC {
+    public static void main(String[] a) {
+        Scanner sc = new Scanner(System.in);
+        System.out.print("Enter message bits: ");
+        String msg = sc.nextLine();
+        System.out.print("Enter generator bits: ");
+        String gen = sc.nextLine();
+
+        String data = msg + "0".repeat(gen.length() - 1);
+        char[] d = data.toCharArray(), g = gen.toCharArray();
+
+        for (int i = 0; i <= d.length - g.length; i++)
+            if (d[i] == '1')
+                for (int j = 0; j < g.length; j++)
+                    d[i + j] = d[i + j] == g[j] ? '0' : '1';
+
+        // Extract CRC bits (the remainder)
+        String crc = new String(d).substring(d.length - (g.length - 1));
+        System.out.println("CRC: " + crc);
+
+        String sent = msg + crc;
+        System.out.println("Transmitted message: " + sent);
+
+        System.out.print("Enter received message: ");
+        char[] r = sc.nextLine().toCharArray();
+
+        for (int i = 0; i <= r.length - g.length; i++)
+            if (r[i] == '1')
+                for (int j = 0; j < g.length; j++)
+                    r[i + j] = r[i + j] == g[j] ? '0' : '1';
+
+        System.out.println(new String(r).endsWith("0".repeat(g.length - 1)) ?
+                "No error. Message is valid." : "Error detected in received message.");
+        sc.close();
+    }
+}
